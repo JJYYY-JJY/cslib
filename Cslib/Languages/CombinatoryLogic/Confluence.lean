@@ -59,45 +59,51 @@ inductive ParallelReduction : SKI → SKI → Prop
   | par ⦃a a' b b' : SKI⦄ :
       ParallelReduction a a' → ParallelReduction b b' → ParallelReduction (a ⬝ b) (a' ⬝ b')
 
-/-- The inclusion `⭢ₚ ⊆ ↠` -/
-theorem mRed_of_parallelReduction {a a' : SKI} (h : a ⭢ₚ a') : a ↠ a' := by
+/-- The inclusion `(· ⭢ₚ ·) ≤ (· ↠ ·)`. -/
+theorem parallelReduction_le_reflTransGen_red :
+    (· ⭢ₚ ·) ≤ (· ↠ ·) := by
+  intro a a' h
   cases h
   case refl => exact Relation.ReflTransGen.refl
   case par a a' b b' ha hb =>
     apply parallel_mRed
-    · exact mRed_of_parallelReduction ha
-    · exact mRed_of_parallelReduction hb
+    · exact parallelReduction_le_reflTransGen_red _ _ ha
+    · exact parallelReduction_le_reflTransGen_red _ _ hb
   case red_I => exact Relation.ReflTransGen.single (red_I a')
   case red_K b => exact Relation.ReflTransGen.single (red_K a' b)
   case red_S a b c => exact Relation.ReflTransGen.single (red_S a b c)
 
-/-- The inclusion `⭢ ⊆ ⭢ₚ` -/
-theorem parallelReduction_of_red {a a' : SKI} (h : a ⭢ a') : a ⭢ₚ a' := by
+/-- Pointwise form of `parallelReduction_le_reflTransGen_red`. -/
+theorem mRed_of_parallelReduction {a a' : SKI} (h : a ⭢ₚ a') : a ↠ a' :=
+  parallelReduction_le_reflTransGen_red a a' h
+
+/-- The inclusion `(· ⭢ ·) ≤ (· ⭢ₚ ·)`. -/
+theorem red_le_parallelReduction :
+    (· ⭢ ·) ≤ (· ⭢ₚ ·) := by
+  intro a a' h
   cases h
   case red_S => apply ParallelReduction.red_S
   case red_K => apply ParallelReduction.red_K
   case red_I => apply ParallelReduction.red_I
   case red_head a a' b h =>
     apply ParallelReduction.par
-    · exact parallelReduction_of_red h
+    · exact red_le_parallelReduction _ _ h
     · exact ParallelReduction.refl b
   case red_tail a b b' h =>
     apply ParallelReduction.par
     · exact ParallelReduction.refl a
-    · exact parallelReduction_of_red h
+    · exact red_le_parallelReduction _ _ h
 
-/-- The inclusions of `mRed_of_parallelReduction` and
-`parallelReduction_of_red` imply that `⭢` and `⭢ₚ` have the same reflexive-transitive
-closure. -/
+/-- Pointwise form of `red_le_parallelReduction`. -/
+theorem parallelReduction_of_red {a a' : SKI} (h : a ⭢ a') : a ⭢ₚ a' :=
+  red_le_parallelReduction a a' h
+
+/-- The relations `⭢` and `⭢ₚ` have the same reflexive-transitive closure. -/
 theorem reflTransGen_parallelReduction_mRed :
     ReflTransGen ParallelReduction = ReflTransGen Red := by
-  ext a b
-  constructor
-  · apply reflTransGen_le_of_le
-    -- TODO: restate `parallelReduction_of_red` and others using `≤`?
-    exact @mRed_of_parallelReduction
-  · apply Relation.reflTransGen_le_of_le
-    exact fun a a' h => Relation.ReflTransGen.single (parallelReduction_of_red h)
+  apply le_antisymm
+  · exact reflTransGen_le_of_le parallelReduction_le_reflTransGen_red
+  · exact ReflTransGen.mono red_le_parallelReduction
 
 /-!
 Irreducibility for the (partially applied) primitive combinators.

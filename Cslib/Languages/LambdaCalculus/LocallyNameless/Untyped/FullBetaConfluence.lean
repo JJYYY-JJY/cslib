@@ -73,8 +73,10 @@ lemma para_lc_r (step : M ⭢ₚ N) : LC N := by
   all_goals grind
 
 omit [HasFresh Var] [DecidableEq Var] in
-/-- A single β-reduction implies a single parallel reduction. -/
-lemma step_to_para (step : M ⭢βᶠ N) : M ⭢ₚ N := by
+/-- The inclusion `(· ⭢βᶠ ·) ≤ (· ⭢ₚ ·)`. -/
+lemma fullBeta_le_parallel :
+    ((· ⭢βᶠ ·) : Term Var → Term Var → Prop) ≤ (· ⭢ₚ ·) := by
+  intro M N step
   induction step with
   | base h =>
     cases h with | beta abs_lc _ =>
@@ -83,9 +85,16 @@ lemma step_to_para (step : M ⭢βᶠ N) : M ⭢ₚ N := by
   | abs xs _ _ => apply Parallel.abs xs; grind
   | _ => grind
 
+omit [HasFresh Var] [DecidableEq Var] in
+/-- Pointwise form of `fullBeta_le_parallel`. -/
+lemma step_to_para (step : M ⭢βᶠ N) : M ⭢ₚ N :=
+  fullBeta_le_parallel M N step
+
 open FullBeta in
-/-- A single parallel reduction implies a multiple β-reduction. -/
-lemma para_to_redex (para : M ⭢ₚ N) : M ↠βᶠ N := by
+/-- The inclusion `(· ⭢ₚ ·) ≤ (· ↠βᶠ ·)`. -/
+lemma parallel_le_reflTransGen_fullBeta :
+    ((· ⭢ₚ ·) : Term Var → Term Var → Prop) ≤ (· ↠βᶠ ·) := by
+  intro M N para
   induction para
   case fvar => constructor
   case app L L' R R' l_para m_para redex_l redex_m =>
@@ -105,11 +114,14 @@ lemma para_to_redex (para : M ⭢ₚ N) : M ↠βᶠ N := by
       _           ↠βᶠ m'.abs.app n' := by grind
       _           ⭢βᶠ m' ^ n'       := by grind
 
+/-- Pointwise form of `parallel_le_reflTransGen_fullBeta`. -/
+lemma para_to_redex (para : M ⭢ₚ N) : M ↠βᶠ N :=
+  parallel_le_reflTransGen_fullBeta M N para
+
 /-- Multiple parallel reduction is equivalent to multiple β-reduction. -/
-theorem parachain_iff_redex : M ↠ₚ N ↔ M ↠βᶠ N := by
-  refine Iff.intro ?chain_redex ?redex_chain <;> intros h <;> induction h <;> try rfl
-  case redex_chain redex chain => exact ReflTransGen.tail chain (step_to_para redex)
-  case chain_redex para  redex => exact ReflTransGen.trans redex (para_to_redex para)
+theorem parachain_iff_redex : M ↠ₚ N ↔ M ↠βᶠ N :=
+  ⟨reflTransGen_le_of_le parallel_le_reflTransGen_fullBeta M N,
+    ReflTransGen.mono fullBeta_le_parallel M N⟩
 
 /-- Parallel reduction respects substitution. -/
 @[scoped grind .]
