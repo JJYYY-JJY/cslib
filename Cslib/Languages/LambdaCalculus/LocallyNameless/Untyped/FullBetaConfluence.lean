@@ -109,10 +109,12 @@ lemma Parallel.le_reflTransGen_fullBeta :
       _           ↠βᶠ m'.abs.app n' := by grind
       _           ⭢βᶠ m' ^ n'       := by grind
 
-/-- Multiple parallel reduction is equivalent to multiple β-reduction. -/
-theorem parachain_iff_redex : M ↠ₚ N ↔ M ↠βᶠ N :=
-  ⟨reflTransGen_le_of_le Parallel.le_reflTransGen_fullBeta M N,
-    ReflTransGen.mono FullBeta.le_parallel M N⟩
+/-- Multiple parallel reduction is equal to multiple β-reduction. -/
+theorem reflTransGen_parallel_fullBeta :
+    ((· ↠ₚ ·) : Term Var → Term Var → Prop) = (· ↠βᶠ ·) := by
+  apply le_antisymm
+  · exact reflTransGen_le_of_le Parallel.le_reflTransGen_fullBeta
+  · exact ReflTransGen.mono FullBeta.le_parallel
 
 /-- Parallel reduction respects substitution. -/
 @[scoped grind .]
@@ -208,10 +210,9 @@ theorem para_confluence : Confluent (@Parallel Var) :=
 /-- β-reduction is confluent. -/
 @[wikidata Q1308502]
 theorem confluence_beta : Confluent (@FullBeta Var) := by
-  have eq : ReflTransGen (@Parallel Var) = ReflTransGen (@FullBeta Var) := by
-    ext
-    exact parachain_iff_redex
-  rw [Confluent, ←eq]
+  rw [Confluent]
+  change Diamond ((· ↠βᶠ ·) : Term Var → Term Var → Prop)
+  rw [←reflTransGen_parallel_fullBeta]
   exact para_confluence
 
 end LambdaCalculus.LocallyNameless.Untyped.Term
